@@ -1,0 +1,53 @@
+---
+title: "Data aquisition"
+subtitle: "Exercise 4: Poll data story"
+author: "Markus Kollberg & Ivo Bantel"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# relevant packages
+library(tidyverse)
+library(KFAS)
+
+party_cols <- c(
+    cducsu = "#000000",
+    afd    = "#0489DB",
+    spd    = "#E3000F",
+    grune  = "#1AA037",
+    linke  = "#E3000F",
+    fdp    = "#FFEF00",
+    bsw    = "#A7402E"
+)
+```
+
+## Introduction
+
+In this exercise, we are trying to identify the largest swing in the data for all parties.
+
+## 4.1: Get trends
+
+First, we need to get the trends from the data for the previous exercise. For this, we'll use the `KFAS` package and the `KFAS::KFS()` function.
+
+```{r get_trend, include=TRUE}
+
+
+```
+
+## 4.2: Get largest "swing"
+
+Second, let's define and compute the swings per party by comparing values according to our definition, and inspect the overall swings.
+
+```{r find_swing, include=TRUE}
+
+
+
+```
+
+And finally, let's find the _single largest swing_ for each party in our data.
+
+```{r find_largest_swing, include=TRUE}
+
+```

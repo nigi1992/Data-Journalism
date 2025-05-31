@@ -1,0 +1,51 @@
+---
+title: "Data aquisition"
+subtitle: "Exercise 3: Advanced data acquisition"
+author: "Markus Kollberg & Ivo Bantel"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Load required libraries
+library(rvest)
+library(tidyverse)
+```
+
+
+
+## Assisted data research
+
+Next, we're tackling another aspect of data acquisition: in-depth research of more complex data sources.
+
+**Task**
+- Find out how to get the data underlying the _*European Network of Transmission System Operators*_ (https://www.entsoe.eu/data/map).
+
+Feel free to use LLMs etc.
+
+The **"solution"** should not entail written code but an understanding of how you can retrieve the needed data through the API
+
+
+## API
+
+**Task**
+- Get the actual total load (in MAW) for Germany over the last 30 days using the ENTSO-E API
+- Visualize the data with the `entsoeapi` package
+- you will need an access token for this. Ask us if you get here.
+
+``` {r entsoe_api, include=TRUE}
+
+library(entsoeapi) #remotes::install_github("krose/entsoeapi")
+library(lubridate)
+library(purrr)
+
+# Set token
+Sys.setenv(ENTSOE_PAT="")
+
+
+```
+
+*hint* use the function `entsoeapi::load_actual_total()`
+

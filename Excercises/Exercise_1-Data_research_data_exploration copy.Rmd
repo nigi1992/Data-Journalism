@@ -1,0 +1,72 @@
+---
+title: "Data aquisition"
+subtitle: "Exercise 1: Data research & exploration"
+author: "Markus Kollberg & Ivo Bantel"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Load required libraries
+library(rvest)
+library(tidyverse)
+```
+
+## Introduction
+
+Data acquisition is one of the key elements of data journalism. It provides the starting point and its result often is the limiting factor in telling any story. Often, your story will start with a rather vague idea and will be (partly) shaped by the available data.
+
+This exercise exemplifies some tasks that are derived from your initial idea. Keep in mind: the _initial idea_ is something you will (have to) bring in a typical, real world data project.
+
+## Exercise 1: Data research
+
+First, imagine we want to tell a simple story about Swiss politics and direct democracy. We're not sure what exactly it is, but we want to show the development of referendums over time.
+
+**Task:** In a first step, find data for Swiss referendums over time in table format.
+
+The data should allow you to report interesting developments about referendums over time, e.g. the prevalence of referendum types.
+
+_*Hint*_: This is a _data research task_, not a scraping task. 
+
+_[Your solution should yield a table containing the relevant information.]_
+
+
+Once you found the data, the next step of the work begins: telling a story with data.
+
+We'll start small - have a look at the data and think about 1-2 interesting visualizations about it.
+
+**Task:** 
+- Load, inspect and if necessary, clean the data. 
+- Visualize two interesting dimensions contained in the data, e.g. the prevalence of referendum types over time.
+
+```{r sample_solution_exercise1_2}
+
+# Load Csv file
+referendums <- read.csv('/Users/nicolaswaser/New-project-GitHub-first/R/Data Journalism/Excercises/DATASET EX1 - 09-02-2025.csv', 
+                        sep = ";", 
+                        header = TRUE, 
+                        stringsAsFactors = FALSE)
+
+install.packages("ggplot2")
+library(ggplot2)
+
+# Inspect the data
+str(referendums)
+typeof(referendums$anahme)
+str(referendums$annahme)
+# Convert 'annahme' to a factor variable
+referendums$annahme <- as.factor(referendums$annahme)
+
+# Visualize the number of accepted vs. the number of rejected referendums in dataset
+ggplot(referendums, aes(x = annahme)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Accepted vs. Rejected Referendums in Switzerland",
+       x = "Angenommen",
+       y = "Number of Referendums") +
+  theme_minimal()
+
+
+```
+
