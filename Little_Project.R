@@ -258,7 +258,7 @@ print(paste("The mean Flesch score for the tweets before office is:", mean_flesc
 # = 27.5971178655206
 
 mean_flesch_in <- mean(tweets_in_readability_scores, na.rm = TRUE)
-print(paste("The mean Flesch score for the tweets in office is:", mean_flesch_in))
+print(pate("The mean Flesch score for the tweets in office is:", mean_flesch_in))
 # = 32.0513290073956
 
 
@@ -382,9 +382,6 @@ summary(sentiment_in$ave_sentiment)
 
 ########### Plotting sentiment scores with wordclouds ################
 
-
-
-
 # Wordcloud of positive and negative words:
 install.packages("RColorBrewer")
 install.packages("topicmodels")
@@ -395,7 +392,7 @@ library(topicmodels)
 library(NLP)
 library(tm)
 
-# Example:
+## Example:
 
 # Create a word cloud of positive words:
 #positive_words <- sentiment$element_id[sentiment$ave_sentiment > 0]
@@ -407,7 +404,7 @@ library(tm)
 #negative_text <- cleaning_files_news$text[negative_words]
 #wordcloud(words = unlist(strsplit(negative_text, "\\s+")), min.freq = 5, scale=c(3,0.5), colors="red")
 
-# Application:
+## Application:
 
 # Summary of sentiment scores:
 summary(sentiment_bf$ave_sentiment) 
