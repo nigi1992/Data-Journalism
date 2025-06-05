@@ -1,0 +1,232 @@
+---
+title: "Data aquisition"
+subtitle: "Exercise 2: Web scraping & Poll aggregation"
+author: "Markus Kollberg & Ivo Bantel"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# relevant packages
+library(tidyverse)
+library(rvest)
+library(purrr)
+library(dplyr)
+library(janitor)
+```
+
+## Introduction
+
+Next, we'll embark on a slightly bigger project. Let's imagine we're interested in German political winds and want to use polling data to visualize this.
+
+But as good data journalists, we're not just interested in _a poll_. We're interested in all polls and more so, we're interested in *all polls over time*, similar to POLITICO's *Poll of Polls* (e.g. [Germany](https://www.politico.eu/europe-poll-of-polls/germany) or [Czechia](https://www.politico.eu/europe-poll-of-polls/czech-republic)).
+
+For this, we'll proceed step by step. First, we're using another aspect of data acquisition: *web scraping* using the `rvest` package.
+
+## Exercise 2.1: Data acquisition through web scraping
+
+To obtain the data, we need a page providing German polling data. Luckily for us, [wahlrecht.de](https://www.wahlrecht.de) provides these data readily available.
+
+The goal of this task is to obtain a data set from the sub pages of `https://www.wahlrecht.de/umfragen`
+
+**Task 2.1**:
+- retrieve tables from the relevant pages (`https://www.wahlrecht.de/umfragen/allensbach.htm`, `https://www.wahlrecht.de/umfragen/emnid.htm`, `https://www.wahlrecht.de/umfragen/forsa.htm`, `https://www.wahlrecht.de/umfragen/politbarometer.htm`, `https://www.wahlrecht.de/umfragen/gms.htm`, `https://www.wahlrecht.de/umfragen/dimap.htm`, `https://www.wahlrecht.de/umfragen/insa.htm`, `https://www.wahlrecht.de/umfragen/yougov.htm`)
+- clean the result
+- concatenate into one table
+
+
+```{r scraping_wahlrecht, warning=FALSE}
+
+# 1. Read the main polling overview page
+base_url    <- "https://www.wahlrecht.de/umfragen/"
+main_page   <- read_html(base_url)
+
+# 2. Hard-code the institue names/abbreviations
+desired <- c("allensbach","emnid","forsa","politbarometer",
+             "gms","dimap","insa","yougov")
+
+links <- main_page %>%
+  html_nodes("a") %>%
+  html_attr("href") %>%
+  unique() %>%
+  keep(~ grepl(
+    paste0("^(", paste(desired, collapse="|"), ")\\.htm$"),
+    .x
+  ))
+
+links_named <- paste0("https://www.wahlrecht.de/umfragen/", links)
+names(links_named) <- gsub(".htm", "", links) %>% stringr::str_to_sentence()
+
+# helper to parse the .wilko table on a single page
+parse_tables_polling_institutes <- function(url) {
+    page <- read_html(url)
+    tbl  <- html_node(page, css = ".wilko") # use CSS selector gadget for selection
+    df <- html_table(tbl, fill = TRUE)
+    
+    if(url=="https://www.wahlrecht.de/umfragen/politbarometer.htm"){
+        df <- df %>% row_to_names(row_number = 2)
+    }
+    
+    # clean data
+    # your two “junk” messages:
+    msg1 <- "– Als Umfragewert: nicht ausgewiesen; als Wahlergebnis: nicht teilgenommen"
+    msg2 <- "AfD = Alternative für DeutschlandBSW = Bündnis Sahra Wagenknecht – Vernunft und GerechtigkeitCDU = Christlich Demokratische Union DeutschlandsCSU = Christlich-Soziale Union in Bayern e. V.FDP = Freie Demokratische ParteiFW = FREIE WÄHLER BundesvereinigungGRÜNE = BÜNDNIS 90/DIE GRÜNENLINKE = DIE LINKEPIRATEN = Piratenpartei DeutschlandSonstige = sonstige ParteienSPD = Sozialdemokratische Partei Deutschlands"
+
+    df_clean <- df %>%
+      # clean up the (blank) column names into syntactic names:
+      clean_names() %>%
+      # drop rows where *every* column is msg1 or *every* column is msg2
+      filter(
+        !if_any(everything(), ~ . == msg1),
+        !if_any(everything(), ~ . == msg2),
+        !if_any(everything(), ~ . == "CDU/CSU"),
+        !if_any(everything(), ~ . == "Bundestagswahl")
+      ) %>%
+      # rename the real date‐column (“x”) back to “Datum”:
+      rename(date = x) %>%
+      # keep only A–Z and a–z in each name
+      rename_with(~ str_remove_all(.x, "[^A-Za-z0-9]")) %>% 
+        
+      # select columns
+      select(date, cducsu, spd, grune, fdp, linke, afd, bsw, befragte#, zeitraum
+             ) %>% 
+        
+      mutate(befragte = case_when(befragte=="Bundestagswahl"~50000000, 
+                                  T~as.numeric(befragte)), # 50 Mio valid ballots in 2025
+             across(c(cducsu, spd, grune, fdp, linke, afd, bsw),
+                    ~.x %>% 
+                        str_remove_all("%") %>%      # drop the “%”
+                        str_replace_all(",", ".") %>%# turn comma into dot
+                        as.numeric()                 # coerce to double
+                        ))
+    
+    return(df_clean)
+}
+
+# try out
+# df <- parse_tables_polling_institutes(url=links_named[['Dimap']])
+# df <- parse_tables_polling_institutes(url=links_named[['Politbarometer']])
+
+# 1) map over each URL, parse and clean
+polls_list <- map(
+  links_named,
+  ~ parse_tables_polling_institutes(url = .x)
+)
+
+# 2) bind into one tibble, keeping the list names as a new "institute" column
+all_polls <- bind_rows(
+  polls_list,
+  .id = "institute"
+)
+
+# 3) write intermediary results
+all_polls %>% 
+    write_csv("./exercises_data/polling_aggregation_data/DE_wahlrecht_polls.csv")
+
+```
+
+The result of this step should be a data set (e.g. `tibble`) containing something similar to this:
+```{r example_result_scraping_wahlrecht, echo=F}
+structure(list(institute = c("Allensbach", "Allensbach", "Allensbach", 
+"Allensbach", "Allensbach", "Allensbach"), date = c("19.04.2025", 
+"27.03.2025", "21.02.2025", "13.02.2025", "23.01.2025", "20.12.2024"
+), cducsu = c(27, 29.5, 32, 32, 34, 36), spd = c(16, 16, 14.5, 
+15, 17, 16), grune = c(12, 11.5, 12, 13, 13.5, 12), fdp = c(3, 
+3, 4.5, 5, 4, 4), linke = c(10, 10, 7.5, 6, NA, NA), afd = c(23.5, 
+21, 20, 20, 20, 18), bsw = c(4, 4, 4.5, 4, 5, 6), befragte = c(1.048, 
+1.031, 1.064, 1.021, 1.015, 1.006)), row.names = c(NA, -6L), class = c("tbl_df", 
+"tbl", "data.frame"))
+```
+
+
+## Exercise 2.2: Visualizing scraped complicate data
+
+Next, we want to present these data and visualize polling aggregation trends over time.
+
+If you didn't succeed with the scraping or (more likely) the cleaning entirely: let us know so we can help.
+
+Afterwards, you can use [this](https://www.dropbox.com/scl/fi/ub04b3zho4drtrw3pbqre/DE_wahlrecht_polls_student-copy.csv?rlkey=rsk0fhbuly3v8aewe0foxhytm&dl=0) data set
+
+We want to plot individual polls as dots and trends over time as lines. The color codes have been loaded for you already.
+
+```{r visualization_colors}
+party_cols <- c(
+    cducsu = "#000000",
+    afd    = "#0489DB",
+    spd    = "#E3000F",
+    grune  = "#1AA037",
+    linke  = "#E3000F",
+    fdp    = "#FFEF00",
+    bsw    = "#A7402E"
+)
+```
+
+This data is already fairly clean (as we have pre-cleaned with the scraping). So it only requires minimal adjustments for plotting. 
+
+Use `ggplot2` to create a smoothed line chart overlaying a scatter plot.
+
+```{r visualizing_german_polls, warning=FALSE, message=FALSE}
+
+# pivot longer
+all_polls_long <- all_polls %>% 
+    pivot_longer(
+        cols=!c(institute, date, befragte), 
+        names_to="party", 
+        values_to="polling_percent") %>% 
+    filter(!is.na(polling_percent))
+
+# prepare for plotting
+all_polls_long <- all_polls_long %>% 
+    mutate(Date=as.Date(date, format="%d.%m.%Y"))
+
+# make the plot
+plot_de_polls <- all_polls_long %>% 
+    ggplot(aes(x = Date, 
+               y = polling_percent, 
+               color = party)) +
+    geom_point(size=.01, alpha=.1) +
+    geom_smooth(lwd=.4, method="gam") + 
+    scale_color_manual(values = party_cols,
+                       labels = c(afd   = "AfD", 
+                                  grune = "Greens",
+                                  cducsu = "CDU/CSU",
+                                  spd = "SPD",
+                                  fdp="FDP",
+                                  bsw="BSW")) +
+    labs(title="Polling trends in Germany", 
+         x     = "Date", y     = "Polling %", color = "Party",
+         caption = "Source: wahlrecht.de") +
+    theme_minimal() +
+    theme(
+      legend.position    = "bottom",
+      legend.key         = element_rect(fill = "white", colour = NA),
+      legend.background  = element_rect(fill = "white", colour = NA)
+    ) +
+    # here’s the magic: in the legend, drop the ribbon by setting fill = NA
+    guides(
+      color = guide_legend(
+        override.aes = list(
+          fill  = NA,    # no grey ribbon in key
+          alpha = 1,     # make sure line is fully opaque
+          size  = .8     # optionally bump up line weight in key
+        )
+      )
+    )
+
+print(plot_de_polls)
+```
+
+### Exercise 2.3 (Bonus!): Adding to plot
+
+If you want to go beyond this:
+
+- add polling error intervals based on sample sizes
+- add election "ground truth" into plot and adjust the trends
+
+```{r visualizing_german_polls_bonus, warning=FALSE, message=FALSE}
+
+# your code here
+
+```
+

@@ -1,0 +1,96 @@
+---
+title: "Data aquisition"
+subtitle: "Exercise 1: Data research & exploration"
+author: "Markus Kollberg & Ivo Bantel"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Load required libraries
+library(rvest)
+library(tidyverse)
+```
+
+## Introduction
+
+Data acquisition is one of the key elements of data journalism. It provides the starting point and its result often is the limiting factor in telling any story. Often, your story will start with a rather vague idea and will be (partly) shaped by the available data.
+
+This exercise exemplifies some tasks that are derived from your initial idea. Keep in mind: the _initial idea_ is something you will (have to) bring in a typical, real world data project.
+
+## Exercise 1: Data research
+
+First, imagine we want to tell a simple story about Swiss politics and direct democracy. We're not sure what exactly it is, but we want to show the development of referendums over time.
+
+**Task:** In a first step, find data for Swiss referendums over time in table format.
+
+The data should allow you to report interesting developments about referendums over time, e.g. the prevalence of referendum types.
+
+_*Hint*_: This is a _data research task_, not a scraping task. 
+
+_[Your solution should yield a table containing the relevant information.]_
+
+```{r solution_exercise1_1}
+
+# The page
+# https://www.pxweb.bfs.admin.ch/pxweb/de/px-x-1703010000_102/px-x-1703010000_102/px-x-1703010000_102.px/table/tableViewLayout2/*
+# contains the wanted data.
+#
+# Make the following selections
+## Kanton: Schweiz
+## Periode: Wortanfang "Jahr:" - alles auswählen
+## Abstimmungsvorlage (Typ): select "Obligatorisches..., Fakultatives..., Volksinitiative, Alle Vorlagentypen"
+## Abstimmungsvorlage (angenommen/verworfen): select "Angenommen, Verworfen, Total"
+## You should see: "Die Anzahl der gewählten Datenzellen ist: 1668"
+## Click    "Weiter", "Ergebnis speichern als", "Textdatei (Komma-getrennt) ohne Kopfzeile"
+#
+# This gives you a file named like this "px-x-1703010000_102_202505xx-xxxxxx.csv"
+# It has 139 obs of 14 variables, inter alia
+##  'Periode', 'Obligatorisches Referendum Total', 'Fakultatives Referendum Total', 'Volksinitiative Total'
+```
+
+
+Once you found the data, the next step of the work begins: telling a story with data.
+
+We'll start small - have a look at the data and think about 1-2 interesting visualizations about it.
+
+**Task:** 
+- Load, inspect and if necessary, clean the data. 
+- Visualize two interesting dimensions contained in the data, e.g. the prevalence of referendum types over time.
+
+```{r sample_solution_exercise1_2}
+
+swissrefs_r <- read_csv("./exercises_data/swissrefs_data/px-x-1703010000_102_20250504-142151.csv", show_col_types=F)
+
+swissrefs <- swissrefs_r %>% 
+    mutate(year=str_extract(Periode, "\\d+") %>% as.numeric()) %>% 
+    rename(`Referendum (mandatory) Total`= `Obligatorisches Referendum Total`,
+           `Referendum (optional) Total`= `Fakultatives Referendum Total`,
+           `Initiative Total`= `Volksinitiative Total`,
+           ) %>% 
+    select(year, ends_with("Total"), -`Alle Vorlagentypen Total`) %>% 
+    pivot_longer(cols=!year, names_to="type_referendum", values_to="number_of_referendums") %>% 
+    mutate(type_referendum = str_replace_all(type_referendum, " Total", "")) %>% 
+    
+    # make decades
+    mutate(decade_starting_in = (floor(year / 10) * 10)) %>%
+    group_by(decade_starting_in, type_referendum) %>%
+    summarise(n = sum(number_of_referendums), .groups = "drop")
+
+ggplot(swissrefs,
+       aes(x = decade_starting_in,
+           y = n,
+           fill = type_referendum,
+           group = type_referendum)) +      
+  geom_area(colour = "white", linewidth = .3, position = "stack") +
+  scale_fill_grey(name  = NULL, start = 0.8, end   = 0.2) +
+  labs(title="Direct democracy: from consultation to shaping", subtitle = "Swiss federal ballots by type",
+       caption = "Source: Bundesamt für Statistik (BfS).",
+       x = NULL, y = "Number of referendums") +
+  theme_minimal(base_size = 14) +
+  theme(legend.position = "bottom", panel.grid.minor = element_blank())
+
+```
+

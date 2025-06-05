@@ -7,12 +7,15 @@
 ########## Importing & shortening of data ##############
 
 # Set individual directory:
-setwd("C:/Users/nadja/Documents/Data Journalism/Little Project")
+#setwd("C:/Users/nadja/Documents/Data Journalism/Little Project")
 
 # Import Trump Tweets before and in office:
-Trump_tweets_bf_office <- read.csv("C:/Users/nadja/Documents/Data Journalism/Little Project/realDonaldTrump_bf_office.csv")
-Trump_tweets_in_office <- read.csv("C:/Users/nadja/Documents/Data Journalism/Little Project/realDonaldTrump_in_office.csv")
+#Trump_tweets_bf_office <- read.csv("C:/Users/nadja/Documents/Data Journalism/Little Project/realDonaldTrump_bf_office.csv")
+#Trump_tweets_in_office <- read.csv("C:/Users/nadja/Documents/Data Journalism/Little Project/realDonaldTrump_in_office.csv")
 
+Trump_tweets_bf_office <- read.csv('/Users/nicolaswaser/New-project-GitHub-first/R/Data Journalism/Data Sets for Projects/realDonaldTrump_bf_office.csv')
+Trump_tweets_in_office <- read.csv('/Users/nicolaswaser/New-project-GitHub-first/R/Data Journalism/Data Sets for Projects/realDonaldTrump_in_office.csv')
+  
 # View time window:
 range(Trump_tweets_bf_office$Time, na.rm = TRUE) # " 2009-05-04 13:54" " 2017-01-19 22:24"
 range(Trump_tweets_in_office$Time, na.rm = TRUE) # " 2017-01-20 06:31" " 2021-01-08 23:44"
@@ -75,6 +78,165 @@ In_office_corpus[1:3]
 
 ########### Key words in context: Tariffs ################
 
+### Without tokens:
+
+# example media tweets:
+tweet_about_media = str_detect(Bf_office_corpus, "CNN|media|fake news")
+# Count the number of tweets about media:
+sum(tweet_about_media) # 431
+# Show the first 5 tweets about media:
+Bf_office_corpus[tweet_about_media][1:5]
+
+## tweets about tariffs:
+
+# before office:
+tweet_about_tariffs_bf = str_detect(Bf_office_corpus, "tariff|tariffs|trade|trade war|protectionis|deficit|surplus|barrier|imbalance|NAFTA|nafta")
+# Count the number of tweets about tariffs:
+sum(tweet_about_tariffs_bf) # 142
+# Show the first 5 tweets about tariffs:
+Bf_office_corpus[tweet_about_tariffs_bf][1:5]
+
+# in office:
+tweet_about_tariffs_in = str_detect(In_office_corpus, "tariff|tariffs|trade|trade war|protectionis|deficit|surplus|barrier|imbalance|NAFTA|nafta")
+# Count the number of tweets about tariffs:
+sum(tweet_about_tariffs_in) # 611
+# Show the first 5 tweets about tariffs:
+In_office_corpus[tweet_about_tariffs_in][1:5]
+
+# Plot Number of Tweets about Tariffs before and in Office
+library(ggplot2)
+ggplot(data = data.frame(
+  Period = c("Before Office", "In Office"),
+  Count = c(sum(tweet_about_tariffs_bf), sum(tweet_about_tariffs_in))
+)) +
+  geom_bar(aes(x = Period, y = Count), stat = "identity", fill = "steelblue") +
+  labs(title = "Number of Tweets about Tariffs",
+       x = "Period",
+       y = "Count of Tweets") +
+  theme_bw()
+ggsave("trump_tariffs_tweets_plot_simple.png", width = 8, height = 6, dpi = 300)
+
+
+
+
+### With simple tokens:
+
+tokens_bf <- tokens(Bf_office_corpus)
+tokens_in <- tokens(In_office_corpus)
+
+kwic(tokens_bf, pattern = "tariff", window = 5)
+kwic(tokens_in, pattern = "tariff", window = 5)
+
+kwic(tokens_bf, pattern = "tariffs", window = 5)
+kwic(tokens_in, pattern = "tariffs", window = 5)
+
+kwic(tokens_bf, pattern = "tariff*", window = 5)
+kwic(tokens_in, pattern = "tariff*", window = 5)
+
+
+# search for "tariffs" in context
+kwic_tariffs_bf <- kwic(tokens_bf, pattern = "tariff*", window = 5)
+kwic_tariffs_in <- kwic(tokens_in, pattern = "tariff*", window = 5)
+
+# view results
+head(kwic_tariffs_bf)
+head(kwic_tariffs_in)
+
+# creating a document-feature matrix
+dfm_bf <- dfm(tokens_bf)
+dfm_in <- dfm(tokens_in)
+
+# count occurrences
+topfeatures(dfm_select(dfm_bf, pattern = "tariff*"))
+topfeatures(dfm_select(dfm_in, pattern = "tariff*"))
+
+
+### With cleaned tokens:
+
+head(Bf_office_tokens)
+head(In_office_tokens)
+
+# DFM (document-feature matrix) 
+Bf_office_dfm <- dfm(Bf_office_tokens)
+In_office_dfm <- dfm(In_office_tokens)
+
+str(Bf_office_dfm)
+str(In_office_dfm)
+
+
+# search for "tariffs" in context
+kwic(Bf_office_tokens, pattern = "tariff", window = 5)
+kwic(In_office_tokens, pattern = "tariff", window = 5)
+
+kwic(Bf_office_tokens, pattern = "tariffs", window = 5)
+kwic(In_office_tokens, pattern = "tariffs", window = 5)
+
+kwic(Bf_office_tokens, pattern = "tariff*", window = 5)
+kwic(In_office_tokens, pattern = "tariff*", window = 5)
+
+
+Bf_office_kwic <- kwic(Bf_office_tokens, pattern = "tariff*", window = 5)
+In_office_kwic <- kwic(In_office_tokens, pattern = "tariff*", window = 5)
+
+# view results
+head(Bf_office_kwic)
+head(In_office_kwic)
+
+topfeatures(dfm_select(Bf_office_dfm, pattern = "tariff*"))
+topfeatures(dfm_select(In_office_dfm, pattern = "tariff*"))
+
+
+
+### Use more than one keyword for tariffs:
+
+patterns <- c("tariff*", "trade", "protectionis*", "deficit", "surplus", "barrier", "imbalance", "nafta")
+# search for multiple keywords in context
+
+Bf_office_kwic_multi <- kwic(Bf_office_tokens, pattern = patterns, window = 5, valuetype = "fixed")
+In_office_kwic_multi <- kwic(In_office_tokens, pattern = patterns, window = 5, valuetype = "fixed")
+
+# remove rows with duplicate docnames
+Bf_office_kwic_multi <- Bf_office_kwic_multi[!duplicated(Bf_office_kwic_multi$docname), ]
+In_office_kwic_multi <- In_office_kwic_multi[!duplicated(In_office_kwic_multi$docname), ]
+
+# view results
+head(Bf_office_kwic_multi)
+head(In_office_kwic_multi)
+
+# Count occurrences of each keyword in the context
+topfeatures(dfm_select(Bf_office_dfm, pattern = patterns))
+topfeatures(dfm_select(In_office_dfm, pattern = patterns))
+
+
+patterns <- c("tariff", "trade", "protectionist", "deficit", "surplus", "barrier", "nafta")
+
+# Count keyword frequencies manually for each dataset
+counts_before <- colSums(dfm_select(Bf_office_dfm, pattern = patterns, selection = "keep", valuetype = "fixed"))
+counts_in <- colSums(dfm_select(In_office_dfm, pattern = patterns, selection = "keep", valuetype = "fixed"))
+
+# Merge counts into a tidy data frame
+keyword_freq <- data.frame(
+  Keyword = patterns,
+  Count_Before = counts_before[patterns],
+  Count_In = counts_in[patterns]
+)
+
+# Reshape for ggplot
+library(tidyr)
+keyword_freq_long <- keyword_freq |>
+  pivot_longer(cols = c(Count_Before, Count_In), names_to = "Period", values_to = "Count")
+
+# Plot
+ggplot(keyword_freq_long, aes(x = Keyword, y = Count, fill = Period)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  scale_fill_manual(values = c("Count_Before" = "steelblue", "Count_In" = "firebrick")) +
+  labs(title = "Occurrences of Trade-Related Keywords in Trump's Tweets",
+       x = "Keyword", y = "Count", fill = "Time Period") +
+  theme_bw()
+ggsave("trump_tariff_keywords_plot.png", width = 10, height = 6, dpi = 300)
+
+#Bf_office_kwic_multi <- kwic(Bf_office_tokens, pattern = c("tariff*", "trade", "protectionis", "deficit", "surplus", "barrier", "imbalance", "NAFTA", "nafta"), window = 5)
+#In_office_kwic_multi <- kwic(In_office_tokens, pattern = c("tariff*", "trade", "protectionis", "deficit", "surplus", "barrier", "imbalance", "NAFTA", "nafta"), window = 5)
 
 
 ########### Flesch score ################
@@ -104,9 +266,9 @@ print(paste("The mean Flesch score for the tweets in office is:", mean_flesch_in
 # The standard of the score is between 60 and 70.
 # This means that trumps tweets are harder to read.
 # The tweets do not have a high readability score.
-# There is small improvement between before office
-# and  when he was in office. But both scores are
-# still low. But we need to consider that internet
+# There is small improvement from before office
+# to when he was in office. But both scores are
+# still low. However, we need to consider that internet
 # language in general probably would not get a high
 # score from the flesh score.
 
@@ -214,8 +376,8 @@ summary(sentiment_in$ave_sentiment)
 # from more than -1 to around 2 which means that there
 # are positive tweets found and also negative ones.
 # But there seems to be more positivity than negativity.
-# The mean and median show that the average tweet is neutral to
-# slightly positive.
+# The mean and median show that the average tweet falls 
+# somewhere in the range of neutral to slightly positive.
 
 
 ########### Plotting sentiment scores with wordclouds ################
@@ -233,20 +395,60 @@ library(topicmodels)
 library(NLP)
 library(tm)
 
+# Example:
+
 # Create a word cloud of positive words:
-positive_words <- sentiment$element_id[sentiment$ave_sentiment > 0]
-positive_text <- cleaning_files_news$text[positive_words]
-wordcloud(words = unlist(strsplit(positive_text, "\\s+")), min.freq = 5, scale=c(3,0.5), colors="green")
+#positive_words <- sentiment$element_id[sentiment$ave_sentiment > 0]
+#positive_text <- cleaning_files_news$text[positive_words]
+#wordcloud(words = unlist(strsplit(positive_text, "\\s+")), min.freq = 5, scale=c(3,0.5), colors="green")
 
 # Create a word cloud of negative words:
-negative_words <- sentiment$element_id[sentiment$ave_sentiment < 0]
-negative_text <- cleaning_files_news$text[negative_words]
-wordcloud(words = unlist(strsplit(negative_text, "\\s+")), min.freq = 5, scale=c(3,0.5), colors="red")
+#negative_words <- sentiment$element_id[sentiment$ave_sentiment < 0]
+#negative_text <- cleaning_files_news$text[negative_words]
+#wordcloud(words = unlist(strsplit(negative_text, "\\s+")), min.freq = 5, scale=c(3,0.5), colors="red")
+
+# Application:
+
+# Summary of sentiment scores:
+summary(sentiment_bf$ave_sentiment) 
+summary(sentiment_in$ave_sentiment)
+
+## Before office:
+
+# Create a word cloud of positive words before office:
+positive_words_bf <- sentiment_bf$element_id[sentiment_bf$ave_sentiment > 0]
+positive_text_bf <- Trump_tweets_bf_office$Tweet.Text.Cleaned[positive_words_bf]
+png("trump_wordcloud_positive_bf_office.png", width = 1200, height = 800, res = 150)
+#wordcloud(words = unlist(strsplit(positive_text_bf, "\\s+")), min.freq = 5, scale=c(3,0.5), colors="green")
+wordcloud(words = unlist(strsplit(positive_text_bf, "\\s+")), min.freq = 10, scale=c(10,0.5), colors=colorRampPalette(c("green4", "green3", "green2", "green1", "greenyellow"))(100))
+dev.off() # Close the device to save the image
+
+# Create a word cloud of negative words before office:
+negative_words_bf <- sentiment_bf$element_id[sentiment_bf$ave_sentiment < 0]
+negative_text_bf <- Trump_tweets_bf_office$Tweet.Text.Cleaned[negative_words_bf]
+png("trump_wordcloud_negative_bf_office.png", width = 1200, height = 800, res = 150)
+#wordcloud(words = unlist(strsplit(negative_text_bf, "\\s+")), min.freq = 5, scale=c(3,0.5), colors="red")
+wordcloud(words = unlist(strsplit(negative_text_bf, "\\s+")), min.freq = 10, scale=c(10,0.5), colors=colorRampPalette(c("red4", "red3", "red2", "red1", "lightcoral"))(100))
+dev.off() # Close the device to save the image
 
 
+## In office:
 
+# Create a word cloud of positive words in office:
+positive_words_in <- sentiment_in$element_id[sentiment_in$ave_sentiment > 0]
+positive_text_in <- Trump_tweets_in_office$Tweet.Text.Cleaned[positive_words_in]
+png("trump_wordcloud_positive_in_office.png", width = 1200, height = 800, res = 150)
+#wordcloud(words = unlist(strsplit(positive_text_in, "\\s+")), min.freq = 5, scale=c(3,0.5), colors="green")
+wordcloud(words = unlist(strsplit(positive_text_in, "\\s+")), min.freq = 10, scale=c(10,0.5), colors=colorRampPalette(c("green4", "green3", "green2", "green1", "greenyellow"))(100))
+dev.off() # Close the device to save the image
 
-
+# Create a word cloud of negative words in office:
+negative_words_in <- sentiment_in$element_id[sentiment_in$ave_sentiment < 0]
+negative_text_in <- Trump_tweets_in_office$Tweet.Text.Cleaned[negative_words_in]
+png("trump_wordcloud_negative_in_office.png", width = 1200, height = 800, res = 150)
+#wordcloud(words = unlist(strsplit(negative_text_in, "\\s+")), min.freq = 5, scale=c(3,0.5), colors="red")
+wordcloud(words = unlist(strsplit(negative_text_in, "\\s+")), min.freq = 10, scale=c(10,0.5), colors=colorRampPalette(c("red4", "red3", "red2", "red1", "lightcoral"))(100))
+dev.off() # Close the device to save the image
 
 ########### Dictionary with curse words ################
 
@@ -278,18 +480,112 @@ summary(custom_sentiment_in)
 # If something is found then it is positive words and not negative ones.
 
 
+# Summarizing the positive and negative words:
+custom_sentiment_bf %>%
+  summarise(positive = sum(positive, na.rm = TRUE),
+            negative = sum(negative, na.rm = TRUE))
+
+custom_sentiment_in %>%
+  summarise(positive = sum(positive, na.rm = TRUE),
+            negative = sum(negative, na.rm = TRUE))
+
+# As Df frequency tables
+word_freq_bf <- textstat_frequency(Bf_office_dfm_dict, n = NULL) %>%
+  mutate(period = "Before Office")
+
+word_freq_in <- textstat_frequency(In_office_dfm_dict, n = NULL) %>%
+  mutate(period = "In Office")
+
+# Combine and tag sentiment
+word_freq_all <- bind_rows(word_freq_bf, word_freq_in) %>%
+  mutate(sentiment = case_when(
+    feature %in% trump_tweets_dict[["positive"]] ~ "Positive",
+    feature %in% trump_tweets_dict[["negative"]] ~ "Negative",
+    TRUE ~ "Other"
+  )) %>%
+  filter(sentiment != "Other")
+
+
+
 ## Plotting:
+library(dplyr)
+library(ggplot2)
+
+## Plotting neg. vs. pos. words before and in office
+# Step 1: Summarize sentiment counts
+sentiment_counts <- bind_rows(
+  custom_sentiment_bf %>%
+    summarise(positive = sum(positive, na.rm = TRUE),
+              negative = sum(negative, na.rm = TRUE)) %>%
+    mutate(period = "Before Office"),
+  
+  custom_sentiment_in %>%
+    summarise(positive = sum(positive, na.rm = TRUE),
+              negative = sum(negative, na.rm = TRUE)) %>%
+    mutate(period = "In Office")
+)
+
+# Step 2: Reshape data for ggplot
+sentiment_long <- sentiment_counts %>%
+  tidyr::pivot_longer(cols = c("positive", "negative"),
+                      names_to = "sentiment",
+                      values_to = "count")
+
+# Step 3: Plot
+ggplot(sentiment_long, aes(x = period, y = count, fill = sentiment)) +
+  geom_col(position = "dodge") +
+  scale_fill_manual(values = c("positive" = "steelblue", "negative" = "firebrick")) +
+  labs(
+    title = "Positive vs Negative Words in Trump Tweets",
+    x = "Period",
+    y = "Word Count",
+    fill = "Sentiment"
+  ) +
+  theme_bw(base_size = 14)
+# Step 4: Save the plot
+ggsave("trump_sentiment_frequency_plot_simple.png", width = 8, height = 6, dpi = 300)
 
 
 
+## Plotting most frequent neg. and pos. words 
 
+# Extract the dictionary words present in the DFMs
+dict_words <- unlist(trump_tweets_dict)
+dict_words <- dict_words[dict_words %in% featnames(dfm_bf) | dict_words %in% featnames(dfm_in)]
 
+# Subset the DFMs to include only dictionary words
+dfm_bf_dict <- dfm_select(dfm_bf, pattern = dict_words)
+dfm_in_dict <- dfm_select(dfm_in, pattern = dict_words)
 
+# Calculate word frequencies
+freq_bf <- textstat_frequency(dfm_bf_dict) %>%
+  mutate(period = "Before Office")
 
+freq_in <- textstat_frequency(dfm_in_dict) %>%
+  mutate(period = "In Office")
 
+# Combine the frequency data and add sentiment labels
+freq_combined <- bind_rows(freq_bf, freq_in) %>%
+  mutate(sentiment = case_when(
+    feature %in% trump_tweets_dict$positive ~ "Positive",
+    feature %in% trump_tweets_dict$negative ~ "Negative"
+  ))
 
-
-
+# Plot the frequencies using ggplot2
+ggplot(freq_combined, aes(x = reorder(feature, frequency), y = frequency, fill = sentiment)) +
+  geom_bar(stat = "identity") +
+  facet_wrap(~period, scales = "free_y") +
+  coord_flip() +
+  scale_fill_manual(values = c("Positive" = "steelblue", "Negative" = "firebrick")) +
+  labs(
+    title = "Frequency of Sentiment Words in Trump's Tweets",
+    x = "Word",
+    y = "Frequency",
+    fill = "Sentiment"
+  ) +
+  theme_bw(base_size = 14)
+# Save the plot
+ggsave("trump_sentiment_word_frequency_plot.png", width = 10, height = 8, dpi = 300)
 
 
 ########### Top topics: structural topic model ################
@@ -297,11 +593,16 @@ summary(custom_sentiment_in)
 # Implementation:
 library(stm)
 
+library(lubridate)
+Trump_tweets_bf_office$Time_Coarse <- floor_date(as.POSIXct(Trump_tweets_bf_office$Time), unit = "month")
+Trump_tweets_in_office$Time_Coarse <- floor_date(as.POSIXct(Trump_tweets_in_office$Time), unit = "month")
+
 # Converting the DFM to a DTM:
 Bf_office_dfm_stm <- 
   Bf_office_dfm |> 
   dfm_trim(, sparsity = 0.999) |>
   convert(, to = "stm")
+
 
 In_office_dfm_stm <- 
   In_office_dfm |> 
@@ -316,7 +617,8 @@ stm_model_bf <-
   stm(documents = Bf_office_dfm_stm$documents,
   vocab = Bf_office_dfm_stm$vocab,
   K = k, # this is the number of topics
-  prevalence = ~ Time,
+  #prevalence = ~ Time,
+  #prevalence = ~ s(as.numeric(Time)),
   data = Bf_office_dfm_stm$meta,
   max.em.its = 1500,
   init.type = "Spectral")
@@ -336,17 +638,20 @@ stm_model_in <-
 labelTopics(stm_model_bf)
 labelTopics(stm_model_in)
 
+
+
 # Using Estimated Predicted Probabilities for each Topic
 pre_prob1 <- estimateEffect(1:k ~ s(Time), 
                            stm_model_bf,
                            meta = select(stm_model_bf$meta, Time), 
                            uncertainty = "Global")  
 
+
+
 pre_prob2 <- estimateEffect(1:k ~ s(Time), 
                            stm_model_in,
                            meta = select(stm_model_in$meta, Time), 
                            uncertainty = "Global")  
-
 
 
 
