@@ -7,14 +7,14 @@
 ########## Importing & shortening of data ##############
 
 # Set individual directory:
-#setwd("C:/Users/nadja/Documents/Data Journalism/Little Project")
+setwd("C:/Users/nadja/Documents/Data Journalism/Little Project")
 
 # Import Trump Tweets before and in office:
-#Trump_tweets_bf_office <- read.csv("C:/Users/nadja/Documents/Data Journalism/Little Project/realDonaldTrump_bf_office.csv")
-#Trump_tweets_in_office <- read.csv("C:/Users/nadja/Documents/Data Journalism/Little Project/realDonaldTrump_in_office.csv")
+Trump_tweets_bf_office <- read.csv("C:/Users/nadja/Documents/Data Journalism/Little Project/realDonaldTrump_bf_office.csv")
+Trump_tweets_in_office <- read.csv("C:/Users/nadja/Documents/Data Journalism/Little Project/realDonaldTrump_in_office.csv")
 
-Trump_tweets_bf_office <- read.csv('/Users/nicolaswaser/New-project-GitHub-first/R/Data Journalism/Data Sets for Projects/realDonaldTrump_bf_office.csv')
-Trump_tweets_in_office <- read.csv('/Users/nicolaswaser/New-project-GitHub-first/R/Data Journalism/Data Sets for Projects/realDonaldTrump_in_office.csv')
+#Trump_tweets_bf_office <- read.csv('/Users/nicolaswaser/New-project-GitHub-first/R/Data Journalism/Data Sets for Projects/realDonaldTrump_bf_office.csv')
+#Trump_tweets_in_office <- read.csv('/Users/nicolaswaser/New-project-GitHub-first/R/Data Journalism/Data Sets for Projects/realDonaldTrump_in_office.csv')
   
 # View time window:
 range(Trump_tweets_bf_office$Time, na.rm = TRUE) # " 2009-05-04 13:54" " 2017-01-19 22:24"
@@ -450,6 +450,7 @@ png("trump_wordcloud_negative_in_office.png", width = 1200, height = 800, res = 
 wordcloud(words = unlist(strsplit(negative_text_in, "\\s+")), min.freq = 10, scale=c(10,0.5), colors=colorRampPalette(c("red4", "red3", "red2", "red1", "lightcoral"))(100))
 dev.off() # Close the device to save the image
 
+
 ########### Dictionary with curse words ################
 
 # Defining a dictionary with the most used curse words and good words in english:
@@ -628,7 +629,8 @@ stm_model_in <-
   stm(documents = In_office_dfm_stm$documents,
       vocab = In_office_dfm_stm$vocab,
       K = k, # this is the number of topics
-      prevalence = ~ Time,
+      #prevalence = ~ Time,
+      #prevalence = ~ s(as.numeric(Time)),
       data = In_office_dfm_stm$meta,
       max.em.its = 1500,
       init.type = "Spectral")
@@ -636,68 +638,71 @@ stm_model_in <-
 
 # Labeling Topics:
 labelTopics(stm_model_bf)
+
+#Topic 1 Top Words:
+#Highest Prob: get, go, peopl, one, want, know, never 
+#FREX: go, birthday, fire, never, nbc, enough, cant 
+#Lift: birthday, premier, schneiderman, albert, einstein, episod, omarosa 
+#Score: birthday, go, peopl, one, get, never, cant 
+#Topic 2 Top Words:
+#Highest Prob: just, good, think, obama, big, work, poll 
+#FREX: poll, hard, luck, jeb, cours, fox, news 
+#Lift: 1000, abc, bird, succeed, ugli, alexsalmond, chris 
+#Score: luck, think, poll, good, obama, big, just 
+#Topic 3 Top Words:
+#Highest Prob: realdonaldtrump, trump, thank, great, presid, donald, run 
+#FREX: thank, presid, donald, run, mr, pleas, 2016 
+#Lift: admir, ass, brandiglanvill, cute, genius, mikeandmik, style 
+#Score: realdonaldtrump, happi, thank, trump, presid, run, donald 
+#Topic 4 Top Words:
+#Highest Prob: ä, make, america, us, now, see, back 
+#FREX: join, deal, carolina, togeth, south, book, read 
+#Lift: achiev, americafirst, copi, icymi, imwithyou, indiana, korea 
+#Score: ä, america, make, us, howardstern, back, now 
+#Topic 5 Top Words:
+#Highest Prob: like, time, new, look, via, job, dont 
+#FREX: crook, york, fail, lie, pay, ad, global 
+#Lift: global, maralago, nytim, 3rd, berni, judgement, sander 
+#Score: 3rd, new, hillari, bad, time, via, like 
+
+
 labelTopics(stm_model_in)
 
+#Topic 1 Top Words:
+#Highest Prob: democrat, countri, us, year, work, good, much 
+#FREX: whitehous, countri, secur, power, fund, terribl, use 
+#Lift: danscavino, jasoninthehous, oh, ignor, jimjordan, repdougcollin, melania 
+#Score: danscavino, democrat, countri, us, work, whitehous, good 
+#Topic 2 Top Words:
+#Highest Prob: presid, trump, american, vote, job, 🄠, like 
+#FREX: 🄠, american, poll, run, schiff, presid, person 
+#Lift: harass, 🄠, absente, incom, admin, bishop, mayb 
+#Score: harass, presid, trump, 🄠, american, vote, job 
+#Topic 3 Top Words:
+#Highest Prob: realdonaldtrump, thank, now, time, fake, make, today 
+#FREX: china, dollar, thank, militari, famili, time, stop 
+#Lift: thanksgiv, patrol, china, twitter, die, minist, account 
+#Score: thanksgiv, now, today, thank, time, realdonaldtrump, make 
+#Topic 4 Top Words:
+#Highest Prob: rt, amp, news, republican, go, senat, hous 
+#FREX: law, washington, polic, republican, peac, hoax, can 
+#Lift: drain, fisa, rudygiuliani, peac, chuck, dossier, page 
+#Score: rt, amp, drain, republican, can, go, say 
+#Topic 5 Top Words:
+#Highest Prob: great, peopl, state, get, just, want, america 
+#FREX: never, way, night, impeach, peopl, two, book 
+#Lift: transit, improv, hate, becom, night, manag, never 
+#Score: great, transit, peopl, get, never, state, america 
 
 
-# Using Estimated Predicted Probabilities for each Topic
-pre_prob1 <- estimateEffect(1:k ~ s(Time), 
-                           stm_model_bf,
-                           meta = select(stm_model_bf$meta, Time), 
-                           uncertainty = "Global")  
-
-
-
-pre_prob2 <- estimateEffect(1:k ~ s(Time), 
-                           stm_model_in,
-                           meta = select(stm_model_in$meta, Time), 
-                           uncertainty = "Global")  
-
-
-
-
-
-
-# Plotting:
-
-
-# Preparations to be able to save the following graph as an EMF in a Word document
-library(officer)
-library(devEMF)
-
-stm_results <- tempfile(fileext = ".emf")
-emf(file = stm_results, width = 8, height = 8)
-
-par(mfrow = c(5, 1), mar = c(3, 4, 1, .5))
-for (i in 1:k) {
-  plot.estimateEffect(pre_prob, 
-                      "mth_sc_19", 
-                      method = "continuous", 
-                      topics = i, 
-                      model = z, 
-                      xaxt = "n", 
-                      printlegend = FALSE, 
-                      xlab = "mth_sc_19",
-                      main = paste0("TOPIC ",i,": ",l_f[i] ))
-  axis(1, 
-       at = seq(0,60,by = 12),
-       labels = seq(2019,2024,by = 1))
-}
-
-# Closing the device and finalizing the file
+## Plotting:
+png("top_topics_bf_plot.png", width = 2000, height = 1500, res = 100)
+plot(stm_model_bf, type = "summary")
 dev.off()
 
-# Export the graph
-read_docx() %>% 
-  body_add_img(src = stm_results, width = 8, height = 8) %>% 
-  print(target = "stm_results.docx") %>% 
-  invisible()
-
-
-
-
-
-
+png("top_topics_in_plot.png", width = 2000, height = 1500, res = 100)
+plot(stm_model_in, type = "summary")
+dev.off()
 
   
 ############### End of R-File ##################
